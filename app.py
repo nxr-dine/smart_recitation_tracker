@@ -56,14 +56,15 @@ def highlight_differences(orig: str, rec: str) -> tuple[str, str]:
             rec_html_parts.extend(rec_words[j1:j2])
         elif tag == "replace":
             # words differ: mark both sides in red
-            orig_html_parts.extend([f"<span style='color:#b00020'>{w}</span>" for w in orig_words[i1:i2]])
-            rec_html_parts.extend([f"<span style='color:#b00020'>{w}</span>" for w in rec_words[j1:j2]])
+            # highlight mismatches with a pastel pink (softer on the eyes)
+            orig_html_parts.extend([f"<span style='color:var(--accent-pink)'>{w}</span>" for w in orig_words[i1:i2]])
+            rec_html_parts.extend([f"<span style='color:var(--accent-pink)'>{w}</span>" for w in rec_words[j1:j2]])
         elif tag == "delete":
             # missing words in recitation: mark original red
-            orig_html_parts.extend([f"<span style='color:#b00020'>{w}</span>" for w in orig_words[i1:i2]])
+            orig_html_parts.extend([f"<span style='color:var(--accent-pink)'>{w}</span>" for w in orig_words[i1:i2]])
         elif tag == "insert":
             # extra words in recitation: mark recognized red
-            rec_html_parts.extend([f"<span style='color:#b00020'>{w}</span>" for w in rec_words[j1:j2]])
+            rec_html_parts.extend([f"<span style='color:var(--accent-pink)'>{w}</span>" for w in rec_words[j1:j2]])
 
     orig_html = " ".join(orig_html_parts)
     rec_html = " ".join(rec_html_parts)
@@ -124,12 +125,57 @@ def main():
     """Main Streamlit app function.
 
     Simple interface to upload a recitation audio file, enter the original verse,
-    and analyze the recitation. Shows the transcribed text, similarity percentage,
-    and highlights differing/missing words in red.
+        and analyze the recitation. Shows the transcribed text, similarity percentage,
+        and highlights differing/missing words in red.
     """
     st.set_page_config(page_title="Smart Recitation Tracker", layout="centered")
-    st.title("Smart Recitation Tracker")
-    st.write("Upload your recitation audio (WAV or MP3) and compare it with the original verse.")
+    # Inject a small pastel UI theme and header HTML
+    st.markdown(
+                """
+                <style>
+                :root{
+                    /* Improved palette: clearer accents and higher contrast while keeping soft tones */
+                    --pastel-mint: #7EE7C6;     /* progress / success */
+                    --pastel-peach: #FFD3B6;    /* secondary warm */
+                    --accent-pink: #FF6B6B;     /* clearer mismatch highlight */
+                    --pastel-blue: #60A5FA;     /* header / subtle accents */
+                    --muted: #FFFFFF;          /* card background */
+                    --text-strong: #08263A;    /* deep blue for important text (percent) */
+                    --muted-ink: #274358;      /* subdued text */
+                    --info-bg: #083B5B;        /* darker info box background */
+                }
+                .custom-header {background:var(--pastel-blue); padding:14px 18px; border-radius:10px; color:var(--text-strong); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;}
+                .custom-sub {color: var(--muted-ink); margin-top:6px}
+                .pastel-button button { background: linear-gradient(90deg,var(--pastel-mint),var(--pastel-peach)); color: var(--text-strong); border: none; padding: 8px 12px; border-radius:8px }
+                .pastel-card { background: var(--muted); padding: 12px; border-radius:10px; box-shadow: 0 6px 18px rgba(4,10,20,0.18) }
+                /* gentle rounding for all native buttons to match the theme */
+                button { border-radius: 8px }
+                /* Dark mode overrides when user's system or Streamlit theme is dark */
+                @media (prefers-color-scheme: dark) {
+                    :root{
+                        --pastel-mint: #3ecf9f;
+                        --pastel-peach: #ffbfa0;
+                        --accent-pink: #ff8b8b;
+                        --pastel-blue: #3b82f6;
+                        --muted: rgba(255,255,255,0.02);
+                        --text-strong: #dff6ff;
+                        --muted-ink: #9fb4c6;
+                        --info-bg: #083b5b;
+                    }
+                    .custom-header { background: linear-gradient(90deg, rgba(59,130,246,0.08), rgba(62,207,159,0.06)); color: var(--text-strong) }
+                    .pastel-card { background: var(--muted); border: 1px solid rgba(255,255,255,0.04); box-shadow: none }
+                    .info-note { background: var(--info-bg); color: rgba(255,255,255,0.95); padding: 14px; border-radius: 8px }
+                    .custom-sub { color: var(--muted-ink) }
+                }
+                </style>
+
+                <div class="custom-header">
+                    <h1 style="margin:0;">Smart Recitation Tracker</h1>
+                    <div class="custom-sub">Upload audio (WAV or MP3) and compare it with the original verse — similarity, highlights and simple reports.</div>
+                </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     # Diagnostics / troubleshooting helper
     with st.expander("Diagnostics"):
@@ -219,98 +265,7 @@ def main():
         normalize_ta = st.checkbox("Normalize 'ة' → 'ه' (normalization)", value=True)
         use_normalized_for_comparison = st.checkbox("Use normalized text for comparison", value=True)
 
-        st.markdown("---")
-        st.header("Live recitation (experimental)")
-        st.write("Start a live recitation session using your browser microphone. This uses an external FastAPI + Vosk streaming server (must be running on port 8000).")
-
-        session_id = st.text_input("Session ID (any short string)", value="live1")
-        cols = st.columns([1, 1, 2])
-        with cols[0]:
-                st.button("Start live (see embedded panel below)")
-        with cols[1]:
-                st.button("Stop live")
-        with cols[2]:
-                if st.button("Import last live transcript"):
-                        # fetch last transcript saved by streaming server
-                        import requests
-
-                        try:
-                                r = requests.get(f"http://localhost:8000/transcript?session={session_id}", timeout=5)
-                                if r.status_code == 200:
-                                        data = r.json()
-                                        st.success("Fetched live transcript")
-                                        st.text_area("Live transcript (imported)", value=data.get("text", ""), height=160, key="live_imported")
-                                else:
-                                        st.error(f"Could not fetch transcript (status {r.status_code})")
-                        except Exception as e:
-                                st.error(f"Error contacting streaming server: {e}")
-
-                # embedded client component: captures mic and shows live partial/final text
-                live_html = """
-<div>
-    <p><b>Live recitation panel</b> — allow microphone access when prompted. Partial and final results will appear below.</p>
-    <button id="start">Start</button>
-    <button id="stop" disabled>Stop</button>
-    <div style="margin-top:0.5rem; background:#f6f6f6; padding:0.5rem; border-radius:6px; min-height:3rem;">
-        <div id="partial" style="color:#444"></div>
-        <div id="final" style="color:#b00020; font-weight:600; margin-top:0.5rem"></div>
-    </div>
-</div>
-<script>
-const session = "{SESSION}";
-const wsUrl = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'ws://'+location.hostname+':8000/ws' : 'ws://'+location.hostname+':8000/ws';
-let ws = null;
-let audioContext, processor, source;
-
-function floatTo16BitPCM(float32Array) {
-    const buffer = new ArrayBuffer(float32Array.length * 2);
-    const view = new DataView(buffer);
-    let offset = 0;
-    for (let i = 0; i < float32Array.length; i++, offset += 2) {
-        let s = Math.max(-1, Math.min(1, float32Array[i]));
-        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-    }
-    return view;
-}
-
-async function startStream(){
-    ws = new WebSocket(wsUrl);
-    ws.binaryType = 'arraybuffer';
-    ws.onopen = ()=>{ console.log('ws open'); ws.send(JSON.stringify({sampleRate:16000, session: session})); }
-    ws.onmessage = (ev)=>{
-        try{ const obj = JSON.parse(ev.data); if(obj.type==='partial'){ document.getElementById('partial').innerText = obj.text; } else if(obj.type==='final'){ document.getElementById('final').innerText = obj.text; } }
-        catch(e){ console.log('ws msg parse', e); }
-    }
-
-    audioContext = new (window.AudioContext || window.webkitAudioContext)({sampleRate:16000});
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    source = audioContext.createMediaStreamSource(stream);
-    processor = audioContext.createScriptProcessor(4096, 1, 1);
-    source.connect(processor);
-    processor.connect(audioContext.destination);
-    processor.onaudioprocess = function(e){
-        const input = e.inputBuffer.getChannelData(0);
-        // convert float32 -> 16-bit PCM
-        const pcmView = floatTo16BitPCM(input);
-        try{ ws.send(pcmView.buffer); }catch(err){ console.warn('ws send err', err); }
-    }
-}
-
-document.getElementById('start').addEventListener('click', async ()=>{
-    document.getElementById('start').disabled = true;
-    document.getElementById('stop').disabled = false;
-    try{ await startStream(); } catch(e){ alert('Could not start microphone capture: '+e); document.getElementById('start').disabled=false; document.getElementById('stop').disabled=true; }
-});
-
-document.getElementById('stop').addEventListener('click', ()=>{
-    document.getElementById('start').disabled = false;
-    document.getElementById('stop').disabled = true;
-    try{ if(processor) processor.disconnect(); if(source) source.disconnect(); if(audioContext) audioContext.close(); if(ws){ ws.send('__close__'); ws.close(); } } catch(e){ console.warn(e); }
-});
-</script>
-""".replace('{SESSION}', session_id)
-
-                st.components.v1.html(live_html, height=300)
+    st.markdown("---")
 
     if st.button("Analyze Recitation"):
         if not uploaded_file:
@@ -326,30 +281,32 @@ document.getElementById('stop').addEventListener('click', ()=>{
         try:
             tmp_in.write(uploaded_file.read())
             tmp_in.flush()
-        finally:
             tmp_in.close()
 
-        try:
-            # if mp3, convert to wav
-            if tmp_in.name.lower().endswith(".mp3"):
-                wav_path = convert_to_wav(tmp_in.name)
-            else:
-                # ensure wav
-                wav_path = tmp_in.name
-
-            with st.spinner("Converting audio to text — please wait..."):
+            # prepare a wav path (convert if necessary)
+            wav_path = tmp_in.name
+            if not wav_path.lower().endswith(".wav"):
                 try:
-                    recognized = transcribe_audio(wav_path)
-                except sr.UnknownValueError:
-                    st.error("Could not understand the audio. Please check recording quality and clarity.")
-                    return
-                except sr.RequestError as e:
-                    st.error(f"An error occurred while contacting the speech recognition service: {e}")
-                    return
+                    wav_path = convert_to_wav(tmp_in.name)
+                except Exception as e:
+                    st.error(f"Failed to convert audio to WAV: {e}")
+                    # fall back to the uploaded file path (may fail STT)
+                    wav_path = tmp_in.name
 
-            # normalize both texts for comparison (depending on the toggle)
-            orig_norm = normalize_arabic(original_text, normalize_ta=normalize_ta)
-            rec_norm = normalize_arabic(recognized, normalize_ta=normalize_ta)
+            # run STT
+            try:
+                with st.spinner("Transcribing audio..."):
+                    recognized = transcribe_audio(wav_path)
+            except sr.UnknownValueError:
+                st.warning("Could not understand the audio (no speech recognized).")
+                recognized = ""
+            except sr.RequestError as e:
+                st.error(f"STT request error: {e}")
+                recognized = ""
+
+            # apply normalization options
+            orig_norm = normalize_arabic(original_text, normalize_ta)
+            rec_norm = normalize_arabic(recognized, normalize_ta)
 
             # choose which texts to compare (normalized or raw)
             comp_orig = orig_norm if use_normalized_for_comparison else original_text
@@ -362,10 +319,10 @@ document.getElementById('stop').addEventListener('click', ()=>{
             # Build highlighted versions (word-level) using the chosen comparison texts
             orig_html, rec_html = highlight_differences(comp_orig, comp_rec)
 
-            # visual similarity bar (colored) using simple inline HTML
-            color = "#2ecc71" if percent >= 80 else ("#f1c40f" if percent >= 50 else "#e74c3c")
-            bar_html = f"<div style='width:100%; background:#eee; border-radius:6px; height:18px;'>"
-            bar_html += f"<div style='width:{percent}%; background:{color}; height:18px; border-radius:6px;'></div></div>"
+            # visual similarity bar (colored) using CSS variables (adapts to dark/light)
+            color_css = "var(--pastel-mint)" if percent >= 80 else ("var(--pastel-peach)" if percent >= 50 else "var(--accent-pink)")
+            bar_html = f"<div style='width:100%; background:var(--muted); border-radius:6px; height:18px;'>"
+            bar_html += f"<div style='width:{percent}%; background:{color_css}; height:18px; border-radius:6px;'></div></div>"
             st.markdown(bar_html, unsafe_allow_html=True)
 
             # compute differing words for the report and display
@@ -391,7 +348,6 @@ document.getElementById('stop').addEventListener('click', ()=>{
                 report_lines.append("None")
 
             report_text = "\n".join(report_lines)
-            st.download_button("Download comparison report", data=report_text, file_name="comparison_report.txt", mime="text/plain")
             # also offer CSV download for spreadsheet-friendly format
             import csv
             import io as _io
@@ -409,28 +365,46 @@ document.getElementById('stop').addEventListener('click', ()=>{
             else:
                 writer.writerow(["replaced_pairs", "None"])
             csv_data = csv_buf.getvalue()
-            st.download_button("Download CSV report", data=csv_data, file_name="comparison_report.csv", mime="text/csv")
 
-            st.subheader("Results")
-            st.markdown(f"**Recognized text (speech-to-text):** {recognized}")
-            st.markdown(f"**Similarity:** {percent} %")
-            # show which comparison mode and normalization are used
-            try:
-                mode_label = 'normalized' if use_normalized_for_comparison else 'raw'
-                ta_label = 'yes' if normalize_ta else 'no'
-                st.caption(f"Comparison mode: {mode_label} • Normalize 'ة'→'ه': {ta_label}")
-            except Exception:
-                # if the variables are not present for some reason, skip the caption
-                pass
+            # Two-column results: left = highlighted texts, right = summary + downloads
+            c_left, c_right = st.columns([3, 1])
 
-            # show highlighted comparison
-            st.markdown("**Original text (differences highlighted in red):**")
-            st.markdown(orig_html, unsafe_allow_html=True)
-            st.markdown("**Recognized text (differences/extra highlighted in red):**")
-            st.markdown(rec_html, unsafe_allow_html=True)
+            with c_right:
+                st.markdown("<div class='pastel-card' style='text-align:center'>", unsafe_allow_html=True)
+                st.markdown(f"<h2 style='margin:6px 0; color:var(--text-strong);'>{percent} %</h2>", unsafe_allow_html=True)
+                st.markdown(f"<div style='color:var(--muted-ink); font-size:14px;'>Similarity</div>", unsafe_allow_html=True)
+                st.markdown("<hr />", unsafe_allow_html=True)
+                st.write(f"Missing: {len(diffs['missing'])}")
+                st.write(f"Extra: {len(diffs['extra'])}")
+                st.write(f"Replacements: {len(diffs['replaced'])}")
+                # downloads
+                st.download_button("Download comparison report", data=report_text, file_name="comparison_report.txt", mime="text/plain")
+                st.download_button("Download CSV report", data=csv_data, file_name="comparison_report.csv", mime="text/csv")
+                st.markdown("</div>", unsafe_allow_html=True)
 
-            # small note about normalization
-            st.info("Note: some automatic normalizations were applied (remove diacritics and unify letters) to improve comparison.")
+            with c_left:
+                st.subheader("Results")
+                st.markdown(f"**Recognized text (speech-to-text):** {recognized}")
+                # show which comparison mode and normalization are used
+                try:
+                    mode_label = 'normalized' if use_normalized_for_comparison else 'raw'
+                    ta_label = 'yes' if normalize_ta else 'no'
+                    st.caption(f"Comparison mode: {mode_label} • Normalize 'ة'→'ه': {ta_label}")
+                except Exception:
+                    # if the variables are not present for some reason, skip the caption
+                    pass
+
+                # show highlighted comparison (inside pastel cards)
+                st.markdown("**Original text (differences highlighted in pastel pink):**")
+                st.markdown(f"<div class='pastel-card' dir='rtl'>{orig_html}</div>", unsafe_allow_html=True)
+                st.markdown("**Recognized text (differences/extra highlighted in pastel pink):**")
+                st.markdown(f"<div class='pastel-card' dir='rtl'>{rec_html}</div>", unsafe_allow_html=True)
+
+                # small note about normalization (custom-styled so we control dark-mode colors)
+                st.markdown(
+                    "<div class='info-note'>Note: some automatic normalizations were applied (remove diacritics and unify letters) to improve comparison.</div>",
+                    unsafe_allow_html=True,
+                )
 
         finally:
             # clean temporary files
