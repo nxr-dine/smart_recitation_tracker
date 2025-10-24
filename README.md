@@ -1,7 +1,5 @@
 # Smart Recitation Tracker
 
-![CI](https://github.com/nxr-dine/smart_recitation_tracker/actions/workflows/ci.yml/badge.svg)
-
 ## Project description
 
 A simple Streamlit application to check the accuracy of a Quran recitation. The user uploads an audio file of their recitation and provides the reference verse text. The app transcribes the audio (speech-to-text), compares the transcribed text to the original verse, and shows a similarity percentage as well as words that are different or missing.
