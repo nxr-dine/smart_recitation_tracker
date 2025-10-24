@@ -6,6 +6,32 @@ st.set_page_config(page_title="Live Recitation", layout="centered")
 st.title("Live Recitation (experimental)")
 st.write("This page captures microphone audio in the browser and streams to the FastAPI+Vosk server (must be running on port 8000).")
 
+# Inject a small theme snippet so the live page matches app styling (works in light & dark)
+st.markdown(
+    """
+    <style>
+    :root{
+        --pastel-mint: #7EE7C6;
+        --pastel-peach: #FFD3B6;
+        --accent-pink: #FF6B6B;
+        --pastel-blue: #60A5FA;
+        --muted: #FFFFFF;
+        --text-strong: #08263A;
+        --muted-ink: #274358;
+        --info-bg: #083B5B;
+    }
+    @media (prefers-color-scheme: dark){
+        :root{ --muted: rgba(255,255,255,0.02); --muted-ink: #9fb4c6; --text-strong: #dff6ff; }
+    }
+    .lr-panel{ background:var(--muted); padding:12px; border-radius:10px; border:1px solid rgba(255,255,255,0.03); box-shadow: 0 6px 18px rgba(4,10,20,0.12); }
+    .lr-btn{ background: linear-gradient(90deg,var(--pastel-mint),var(--pastel-peach)); color:var(--text-strong); padding:10px 16px; border-radius:8px; border:none; }
+    .lr-secondary{ background:transparent; border:1px solid rgba(255,255,255,0.06); color:var(--muted-ink); padding:8px 12px; border-radius:8px }
+    .lr-output{ min-height:3rem; padding:10px; border-radius:8px; background:var(--muted); color:var(--muted-ink); }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 session_id = st.text_input("Session ID (any short string)", value="live1")
 cols = st.columns([1, 1, 2])
 with cols[0]:
@@ -29,11 +55,13 @@ with cols[2]:
 live_html = '''
 <div>
     <p><b>Live recitation panel</b> — allow microphone access when prompted. Partial and final results will appear below.</p>
-    <button id="start">Start</button>
-    <button id="stop" disabled>Stop</button>
-    <div style="margin-top:0.5rem; background:#FBFBFB; padding:0.5rem; border-radius:6px; min-height:3rem;">
-        <div id="partial" style="color:#274358"></div>
-    <div id="final" style="color:#FFAAA5; font-weight:600; margin-top:0.5rem"></div>
+    <button id="start" class="lr-btn">Start</button>
+    <button id="stop" class="lr-secondary" disabled>Stop</button>
+    <div style="margin-top:0.5rem; padding:6px;">
+        <div class="lr-panel">
+            <div id="partial" class="lr-output" style="color:var(--muted-ink); background:transparent; border:none"></div>
+            <div id="final" style="color:var(--accent-pink); font-weight:600; margin-top:0.5rem"></div>
+        </div>
     </div>
 </div>
 <script>
