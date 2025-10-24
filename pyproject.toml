@@ -1,0 +1,12 @@
+[tool.black]
+line-length = 88
+target-version = ['py39']
+exclude = '\\.(venv|env|venv3|\.venv|\.git|\.hg|\.mypy_cache|\.pytest_cache|build|dist)/'
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "W", "C90", "ANN", "N"]
+ignore = ["E501"]
+
+[tool.isort]
+profile = "black"

@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+  app:
+    # In dev we bind-mount the repo so edits appear instantly in the container
+    volumes:
+      - ./:/app:cached
+    ports:
+      - "8501:8501"
+    environment:
+      - PYTHONUNBUFFERED=1
+    command:
+      [
+        "streamlit",
+        "run",
+        "app.py",
+        "--server.port",
+        "8501",
+        "--server.address",
+        "0.0.0.0",
+      ]

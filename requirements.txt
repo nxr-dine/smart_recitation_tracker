@@ -1,0 +1,11 @@
+streamlit>=1.0
+SpeechRecognition>=3.8.1
+pydub>=0.25.1
+# Optional: gTTS for generating a sample Arabic TTS audio (requires network)
+gTTS>=2.3.0
+# Note: ffmpeg (system) is required for pydub to handle mp3 files.
+fastapi>=0.85.0
+uvicorn[standard]>=0.18.0
+websockets>=10.4
+vosk>=0.3.45
+numpy>=1.21

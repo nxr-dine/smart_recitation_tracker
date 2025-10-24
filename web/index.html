@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Smart Recitation Tracker</title>
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      .frame {
+        width: 100%;
+        height: 100vh;
+        border: none;
+      }
+      .header {
+        padding: 1rem;
+        background: #0b5cff;
+        color: white;
+        font-family: sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>Smart Recitation Tracker</h1>
+      <p>
+        Embedded Streamlit app below. When this page is served via the nginx
+        reverse-proxy, the Streamlit app will be proxied at the site root. If
+        you're running the app directly for development instead of using the
+        proxy, open <a href="http://localhost:8501">http://localhost:8501</a>.
+      </p>
+    </div>
+    <!-- Use a relative URL so the iframe loads the proxied Streamlit app
+         when this page is served behind nginx. Pointing to http://localhost:8501
+         from the browser would try to contact the *client's* localhost which
+         breaks uploads when accessed remotely. -->
+    <iframe class="frame" src="/" title="Streamlit app"></iframe>
+  </body>
+</html>

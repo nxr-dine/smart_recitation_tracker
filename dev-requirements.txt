@@ -1,0 +1,9 @@
+# Development and test requirements
+pytest>=7.0
+# Linters / formatters / pre-commit
+black>=23.1.0
+ruff>=0.12.0
+pre-commit>=3.0.0
+# Development and test requirements
+pytest>=7.0
+# Optional: add linters/formatters here, e.g. black, flake8
